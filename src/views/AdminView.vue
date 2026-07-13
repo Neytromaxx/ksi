@@ -10,7 +10,18 @@ const admin = useAdminStore()
 const { toast } = useToast()
 const {
   authed, summary, results, chartRows, total, page, search, loading, error,
+  insights, insightsLoading, weights, weightsBusy,
 } = storeToRefs(admin)
+
+function fmtWeights(w) {
+  return `w1 ${w.w1} · w2 ${w.w2} · w3 ${w.w3} · w4 ${w.w4}`
+}
+
+async function onTrain() {
+  const r = await admin.trainWeights()
+  if (r.ok) toast('Yangi og\'irlik modeli o\'qitildi va faollashtirildi', 'success')
+  else toast(r.message, 'error')
+}
 
 const tokenInput = ref(admin.token)
 const searchInput = ref('')
@@ -147,6 +158,51 @@ async function refresh() {
 
     <!-- Charts -->
     <AdminCharts v-if="chartRows.length" :rows="chartRows" />
+
+    <!-- AI guruh tahlili -->
+    <div class="ai-card">
+      <div class="ai-header">
+        <div class="ai-spark">✨</div>
+        <div style="flex: 1">
+          <div class="ai-label">AI Guruh Tahlili</div>
+          <div class="ai-sub">Barcha natijalar asosida avtomatik xulosalar</div>
+        </div>
+        <button class="btn-ghost-sm" :disabled="insightsLoading" @click="admin.fetchInsights(true)">
+          ↻ Yangilash
+        </button>
+      </div>
+      <div v-if="insightsLoading" class="ai-loading">
+        <div class="ai-dots"><span></span><span></span><span></span></div> Yuklanmoqda...
+      </div>
+      <div v-else-if="insights" class="ai-text" v-html="insights.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n{2,}/g, '<br><br>')"></div>
+      <div v-else class="ai-text">Tahlil uchun kamida 1 ta natija kerak.</div>
+    </div>
+
+    <!-- Adaptiv og'irliklar -->
+    <div class="weights-card">
+      <div class="wt-head">
+        <div>
+          <div class="ai-label">Adaptiv og'irlik modellari</div>
+          <div class="ai-sub">KMI formulasi koeffitsientlari (w₁..w₄)</div>
+        </div>
+        <button class="btn-adm p" :disabled="weightsBusy" @click="onTrain">
+          {{ weightsBusy ? 'Ishlanmoqda…' : '⚙ Regressiya o\'qitish' }}
+        </button>
+      </div>
+      <div class="wt-list">
+        <div v-for="w in weights" :key="w.id" class="wt-row" :class="{ active: w.is_active }">
+          <div>
+            <span class="wt-ver">{{ w.version }}</span>
+            <span v-if="w.is_active" class="wt-badge" style="margin-left: 8px">FAOL</span>
+          </div>
+          <span class="wt-w">{{ fmtWeights(w.weights) }}</span>
+          <span class="wt-w" v-if="w.metrics && w.metrics.r2 != null">R²={{ w.metrics.r2 }} · n={{ w.metrics.n_samples }}</span>
+          <button v-if="!w.is_active" class="btn-ghost-sm" :disabled="weightsBusy" @click="admin.activateWeights(w.id)">
+            Faollashtirish
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Table -->
     <div class="table-card">

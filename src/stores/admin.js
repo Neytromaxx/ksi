@@ -13,6 +13,10 @@ export const useAdminStore = defineStore('admin', {
     summary: null,
     results: [],
     chartRows: [], // grafiklar uchun so'nggi natijalar (100 tagacha)
+    insights: null, // AI guruh tahlili
+    insightsLoading: false,
+    weights: [], // adaptiv og'irlik modellari
+    weightsBusy: false,
     total: 0,
     page: 1,
     perPage: 10,
@@ -47,8 +51,13 @@ export const useAdminStore = defineStore('admin', {
       this.loading = true
       try {
         this.summary = await kmiApi.adminSummary(this.token)
-        await Promise.all([this.fetchResults(1), this.fetchCharts()])
+        await Promise.all([
+          this.fetchResults(1),
+          this.fetchCharts(),
+          this.fetchWeights(),
+        ])
         this.authed = true
+        this.fetchInsights() // ortda yuklanadi
       } catch (e) {
         this.authed = false
         this.error = e.message
@@ -91,6 +100,46 @@ export const useAdminStore = defineStore('admin', {
     async setSearch(q) {
       this.search = q
       await this.fetchResults(1)
+    },
+
+    // AI guruh tahlili (Bosqich 3)
+    async fetchInsights(refresh = false) {
+      this.insightsLoading = true
+      try {
+        this.insights = await kmiApi.adminInsights(this.token, refresh)
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.insightsLoading = false
+      }
+    },
+
+    // Adaptiv og'irliklar (Bosqich 3)
+    async fetchWeights() {
+      this.weights = await kmiApi.adminWeights(this.token)
+    },
+
+    async trainWeights() {
+      this.weightsBusy = true
+      try {
+        await kmiApi.adminTrainWeights(this.token, true)
+        await this.fetchWeights()
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, message: e.message }
+      } finally {
+        this.weightsBusy = false
+      }
+    },
+
+    async activateWeights(id) {
+      this.weightsBusy = true
+      try {
+        await kmiApi.adminActivateWeights(this.token, id)
+        await this.fetchWeights()
+      } finally {
+        this.weightsBusy = false
+      }
     },
   },
 })
