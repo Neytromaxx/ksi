@@ -27,21 +27,32 @@ async function request(path, { method = 'GET', body, headers = {} } = {}) {
   }
 
   let data = null
+  let parseFailed = false
   const text = await res.text()
   if (text) {
     try {
       data = JSON.parse(text)
     } catch {
       data = text
+      parseFailed = true
     }
   }
 
   if (!res.ok) {
     const detail =
       (data && typeof data === 'object' && data.detail) ||
-      (typeof data === 'string' && data) ||
+      (typeof data === 'string' && !parseFailed && data) ||
       `Xatolik (${res.status})`
     throw new ApiError(detail, res.status)
+  }
+
+  // Muvaffaqiyatli javob, lekin JSON emas (odatda: API manzili noto‘g‘ri
+  // sozlangan va o‘rniga HTML sahifa qaytgan).
+  if (parseFailed) {
+    throw new ApiError(
+      'Server JSON o‘rniga boshqa javob qaytardi. VITE_API_BASE backend manziliga to‘g‘ri sozlanganini tekshiring.',
+      res.status,
+    )
   }
   return data
 }
