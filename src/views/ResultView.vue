@@ -9,6 +9,7 @@ import DonutChart from '@/components/result/DonutChart.vue'
 import RadarChart from '@/components/result/RadarChart.vue'
 import GolomshtokSpheres from '@/components/result/GolomshtokSpheres.vue'
 import AiAnalysis from '@/components/result/AiAnalysis.vue'
+import PredictionCard from '@/components/result/PredictionCard.vue'
 
 const props = defineProps({ sessionId: { type: String, default: '' } })
 
@@ -163,6 +164,9 @@ function share() {
     </div>
 
     <!-- Avtomatik tahlil -->
+    <!-- Kasbiy yo'nalish prognozi -->
+    <PredictionCard v-if="result.prediction" :prediction="result.prediction" />
+
     <AiAnalysis :result="result" />
 
     <!-- Tavsiyalar -->
