@@ -26,10 +26,12 @@ function buildSteps(methodologies) {
   ]
   let sectionNum = 2
   for (const m of methodologies) {
+    const questions = m.questions || []
+    if (!questions.length) continue
     const meta = METHODOLOGY_META[m.code] || { badge: 'qb-i', label: m.name }
     const chunks = []
-    for (let i = 0; i < m.questions.length; i += CHUNK) {
-      chunks.push(m.questions.slice(i, i + CHUNK))
+    for (let i = 0; i < questions.length; i += CHUNK) {
+      chunks.push(questions.slice(i, i + CHUNK))
     }
     chunks.forEach((qs, idx) => {
       steps.push({
@@ -80,6 +82,9 @@ export const useQuizStore = defineStore('quiz', {
       this.error = ''
       try {
         const data = await kmiApi.methodologies()
+        if (!Array.isArray(data) || !data.length) {
+          throw new Error('Serverdan metodikalar kelmadi. Backend ishga tushganini tekshiring.')
+        }
         this.methodologies = data
         this.steps = buildSteps(data)
       } catch (e) {
